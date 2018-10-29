@@ -1,0 +1,13 @@
+version: "3.7"
+services:
+  app:
+    container_name: project-3-the-scoop
+    image: node:alpine
+    volumes:
+      - ./:/app
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+    ports:
+      - "4000:4000"
+    command: sh -c "npm install && npm install --no-save -g nodemon && nodemon -L --watch ./server.js ./server.js"
