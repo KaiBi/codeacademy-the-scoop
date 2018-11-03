@@ -2,7 +2,9 @@
 let database = {
   users: {},
   articles: {},
-  nextArticleId: 1
+  nextArticleId: 1,
+  comments: {},
+  nextCommentId: 1
 };
 
 const routes = {
@@ -26,6 +28,19 @@ const routes = {
   },
   '/articles/:id/downvote': {
     'PUT': downvoteArticle
+  },
+  '/comments': {
+    'POST': createComment
+  },
+  '/comments/:id': {
+    'PUT': updateComment,
+    'DELETE': deleteComment
+  },
+  '/comments/:id/upvote': {
+    'PUT': upvoteComment
+  },
+  '/comments/:id/downvote': {
+    'PUT': downvoteComment
   }
 };
 
@@ -238,6 +253,126 @@ function downvote(item, username) {
     item.downvotedBy.push(username);
   }
   return item;
+}
+
+function createComment(url, request) {
+  const response = {};
+
+  const comment = request.body && request.body.comment;
+  const body = comment && comment.body;
+  const username = comment && comment.username;
+  const articleId = comment && comment.articleId;
+
+  if (!body || !database.users[username] || !database.articles[articleId]) {
+    response.status = 400;
+    return response;
+  }
+
+  const newComment = {
+    'id': database.nextCommentId++,
+    'body': body,
+    'username': username,
+    'articleId': articleId,
+    'upvotedBy': [],
+    'downvotedBy': []
+  }
+  database.comments[newComment.id] = newComment;
+
+  database.users[username].commentIds.push(newComment.id);
+  database.articles[articleId].commentIds.push(newComment.id);
+
+  response.status = 201;
+  response.body = { 'comment': newComment };
+  return response;
+}
+
+function updateComment(url, request) {
+  const response = {};
+
+  const newComment = request.body && request.body.comment;
+  if (!newComment) {
+    response.status = 400;
+    return response;
+  }
+
+  const id = Number(url.split('/').filter(segment => segment)[1]);
+  if (!id) {
+    response.status = 200;
+    return response;
+  }
+
+  const oldComment = database.comments[id];
+  if (!oldComment) {
+    response.status = 404;
+    return response;
+  }
+
+  oldComment.body = newComment.body || oldComment.body;
+  oldComment.upvotedBy = newComment.upvotedBy || oldComment.upvotedBy;
+  oldComment.downvotedBy = newComment.downvotedBy || oldComment.downvotedBy;
+
+  response.status = 200;
+  response.comment = database.comments[id];
+  return response;
+}
+
+function deleteComment(url, request) {
+  const response = {};
+
+  const commentId = Number(url.split('/').filter(segment => segment)[1]);
+  if (!commentId || !database.comments[commentId]) {
+    response.status = 404;
+    return response;
+  }
+
+  const username = database.comments[commentId].username;
+  if (username && database.users[username]) {
+    const commentIds = database.users[username].commentIds;
+    commentIds.splice(commentIds.indexOf(commentId), 1);
+  }
+
+  const articleId = database.comments[commentId].articleId;
+  if (articleId && database.articles[articleId]) {
+    const commentIds = database.articles[articleId].commentIds;
+    commentIds.splice(commentIds.indexOf(commentId), 1);
+  }
+
+  database.comments[commentId] = null;
+
+  response.status = 204;
+  return response;
+}
+
+function upvoteComment(url, request) {
+  const response = {};
+  const commentId = Number(url.split('/').filter(segment => segment)[1]);
+  const username = request.body && request.body.username;
+  const comment = database.comments[commentId];
+
+  if (!commentId || !username || !database.users[username] || !comment) {
+    response.status = 400;
+    return response;
+  }
+
+  response.body = { 'comment': upvote(comment, username) };
+  response.status = 200;
+  return response;
+}
+
+function downvoteComment(url, request) {
+  const response = {};
+  const commentId = Number(url.split('/').filter(segment => segment)[1]);
+  const username = request.body && request.body.username;
+  const comment = database.comments[commentId];
+
+  if (!commentId || !username || !database.users[username] || !comment) {
+    response.status = 400;
+    return response;
+  }
+
+  response.body = { 'comment': downvote(comment, username) };
+  response.status = 200;
+  return response;
 }
 
 // Write all code above this line.
