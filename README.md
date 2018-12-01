@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is my solution of the project from the `Build Web APIs From Scratch` course on [codeacademy](https://codeacademy.com).
+This is my solution of the project from the `Build Web APIs From Scratch` course on [codecademy](https://codecademy.com).
 
 ## Project Overview
 
